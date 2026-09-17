@@ -66,9 +66,9 @@ $$\mathcal{G}(F_s) = \sum_{i} w_i \max_{j \in F_s} s(f_i, f_j), \qquad E(F_s) = 
 .
 ├── CGFS_weighted_benchmark_experiment.ipynb   # Sec. 4.3, 4.4, 4.5 (Tables 5–11)
 ├── CGFS_sample_vs_full_experiment.ipynb       # Sec. 4.2 (Tables 3–4, Figure 4)
-├── CGFS_coverage_gain_experiment.ipynb        # Sec. 4.6 (Figure 5)
-├── CGFS_f1_marginal_gains_figure.ipynb        # Sec. 4.6 (Figure 6)
-├── cgfs_f1_marginal_gains.csv                 # Input data for Figure 6
+├── CGFS_coverage_gain_experiment.ipynb        # Sec. 4.6 (Figure 7)
+├── CGFS_f1_marginal_gains_figure.ipynb        # Sec. 4.6 (Figure 8)
+├── cgfs_f1_marginal_gains.csv                 # Input data for Figure 8
 └── README.md
 ```
 
@@ -264,10 +264,10 @@ The notebook also prints several extra analyses that are not part of the paper t
 - a timing breakdown,
 - an optional per-class report.
 
-### Section 4.6, Figure 5: Coverage Trajectory
+### Section 4.6, Figure 7: Coverage Trajectory
 
 **Notebook:** `CGFS_coverage_gain_experiment.ipynb`
-**Produces:** Figure 5, which has two panels: the absolute coverage $\mathcal{G}(F_i)$ per dataset, and the fraction $\mathcal{G}(F_i)/d$ of attainable coverage.
+**Produces:** Figure 7, which has two panels: the absolute coverage $\mathcal{G}(F_i)$ per dataset, and the fraction $\mathcal{G}(F_i)/d$ of attainable coverage.
 
 The notebook runs the greedy for `KMAX = 25` steps on each dataset with `SEEDS = [0, 1, 2]` and reads the coverage values directly from the returned error trace, using $\mathcal{G}(F_i) = d - E_i$. Because the ceiling $d$ differs per dataset (77, 35, and 34 after screening), only the normalized curve is averaged across datasets.
 
@@ -284,11 +284,11 @@ Useful options:
 - `cgfs_coverage_trajectory_raw.csv`, `cgfs_coverage_per_dataset.csv`, `cgfs_coverage_across_datasets.csv`
 - `cgfs_coverage_gain.tex`
 
-### Section 4.6, Figure 6: Marginal F1 Gains
+### Section 4.6, Figure 8: Marginal F1 Gains
 
 **Notebook:** `CGFS_f1_marginal_gains_figure.ipynb`
 **Input:** `cgfs_f1_marginal_gains.csv` (included in the repository)
-**Produces:** Figure 6, a box plot of the marginal weighted-F1 gain over the intervals 0→5, 5→10, 10→15, 15→20, and 20→25.
+**Produces:** Figure 8, a box plot of the marginal weighted-F1 gain over the intervals 0→5, 5→10, 10→15, 15→20, and 20→25.
 
 The CSV has **75 rows**: 3 datasets × 5 classifiers × 5 intervals, so each box summarizes 15 values. Its columns are:
 
@@ -308,7 +308,7 @@ Configuration options:
 
 **Outputs:**
 
-- `cgfs_f1_marginal_gains.png` and `cgfs_f1_marginal_gains.pdf` (**Figure 6**)
+- `cgfs_f1_marginal_gains.png` and `cgfs_f1_marginal_gains.pdf` (**Figure 8**)
 - `cgfs_f1_marginal_gains.tex` (summary statistics table)
 
 **Regenerating the CSV.** The appendix cell of this notebook rebuilds the CSV from the aggregated result files `cgfs_rt-iot_agg.csv`, `cgfs_edge-iiot_agg.csv`, and `cgfs_cic-iot_agg.csv`. To use it, set `REGENERATE = True`. The rebuild keeps the `CGFS-weighted` rows and takes differences of F1 between consecutive budgets. If you point it at the per-run raw files and also group by seed, you get 45 values per box instead of 15.
@@ -405,6 +405,6 @@ Add your license here (e.g., MIT). The datasets remain subject to the licenses a
 ## Contact
 
 - **Ahmed Elliethy** (corresponding author), Military Technical College, Cairo: a.s.elliethy@mtc.edu.eg
-- **Mohammed Nagah Amr**, School of Information Technology, Newgiza University, Cairo
+- **Mohammed Nagah Amr**, School of Information Technology, Newgiza University, Cairo: Moh.Nagah@ngu.edu.eg
 
 Questions and issues are welcome through the GitHub issue tracker.
