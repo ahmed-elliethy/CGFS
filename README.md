@@ -65,7 +65,7 @@ $$\mathcal{G}(F_s) = \sum_{i} w_i \max_{j \in F_s} s(f_i, f_j), \qquad E(F_s) = 
 ```
 .
 ├── CGFS_weighted_benchmark_experiment.ipynb   # Sec. 4.3, 4.4, 4.5 (Tables 5–11)
-├── CGFS_sample_vs_full_experiment.ipynb       # Sec. 4.2 (Tables 3–4, Figure 4)
+├── CGFS_budget_selection_validation.ipynb     # Sec. 4.2 (Tables 3–4, Figure 4)
 ├── CGFS_coverage_gain_experiment.ipynb        # Sec. 4.6 (Figure 7)
 ├── CGFS_f1_marginal_gains_figure.ipynb        # Sec. 4.6 (Figure 8)
 ├── cgfs_f1_marginal_gains.csv                 # Input data for Figure 8
@@ -150,33 +150,58 @@ Results are reported as mean ± std over seeds.
 
 ### Section 4.2: Sensitivity Analysis (choosing k)
 
-**Notebook:** `CGFS_sample_vs_full_experiment.ipynb`
-**Produces:** Table 3 (full-data reference), Table 4, and Figure 4.
+**Notebook:** `CGFS_budget_selection_validation.ipynb`
+**Produces:** Table 3 (full training partitions), Table 4 (20% stratified samples), and Figure 4.
 
-For each dataset, the notebook draws a class-wise stratified sample, runs weighted CGFS, trains a Random Forest on the top $k \in \{5, 10, 15, 20, 25, 30\}$ features, and compares the resulting weighted-F1 curve with the full-dataset curve.
+The budget $k^\star$ is chosen on **validation data only**. The test partitions behind the results of Sections 4.3–4.5 are never used here; the benchmark notebook touches them once, at the selected $k^\star$. For each dataset and seed:
 
-Key configuration (cell 1):
+1. **Outer split.** The same stratified 70/30 split as the benchmark notebook (`train_test_split(X, y, test_size=0.30, stratify=y, random_state=seed)`). The test partition is discarded immediately.
+2. **Inner split.** The 70% training partition is split again, stratified, into a *fitting* subset (80%) and a *validation* subset (20%).
+3. **Selection and scoring.** Screening, z-scoring, the rectified-cosine similarity, the MI weights, and the CGFS greedy are all fitted on the fitting subset. A Random Forest is trained on the fitting subset with the top $k \in \{5, 10, 15, 20, 25, 30\}$ features and scored (weighted F1) on the validation subset.
+4. **Budget rule.** The validation curves are averaged over seeds, and the tolerance rule of Eq. (25) with $\tau = 1\%$ picks $k^\star$.
+5. **Sampled variant.** Each 20% stratified sample is drawn from the *training partition* of the outer split, with the same absolute row count as 20% of the whole dataset (24,623 / 31,559 / 29,708 rows), and then goes through steps 2–4.
+
+> **Keep the seeds aligned.** `SEEDS` must equal the benchmark notebook's `SEEDS`, and the outer split call must stay identical to it. Otherwise validation rows could fall in the benchmark's test partitions and reintroduce leakage.
+
+Key configuration (Section 1 of the notebook):
 
 | Setting | Paper value | Meaning |
 |---|---|---|
 | `DATASETS_TO_RUN` | `["rt-iot", "edge-iiot", "cic-iot"]` | Datasets to process |
-| `SAMPLE_SIZE` | `0.2` for each dataset | 20% stratified sample (an int, fraction, `None`, or per-dataset dict) |
-| `SAMPLE_SEEDS` | `[40, 41, 42]` | Three independent sample draws |
-| `SEEDS` | `[0, 1, 2, 3, 4]` | Five split/forest seeds per draw (15 runs per budget) |
+| `SEEDS` | `[0, 1, 2]` | Outer-split / inner-split / forest seeds. **Must match the benchmark notebook** |
+| `K_LIST` | `[5, 10, 15, 20, 25, 30]` | Candidate budgets |
+| `TAU` | `0.01` | Tolerance $\tau$ of Eq. (25) |
+| `TEST_SIZE` | `0.30` | Outer split, identical to the benchmark |
+| `VAL_SIZE` | `0.20` | Validation share of the training partition |
+| `SAMPLE_SIZE` | `0.2` for each dataset | Fraction of the *whole* dataset, drawn from the training partition (an int, fraction, `None`, or per-dataset dict; `None` skips the sampled variant) |
+| `SAMPLE_SEEDS` | `[40, 41, 42]` | Three independent sample draws (9 runs per budget with `SEEDS`) |
+| `MIN_PER_CLASS` | `2` | Per-class floor so that the stratified inner split is always possible |
 | `BASE_SAMPLE` | `{"cic-iot": {"frac": 1/7, "random_state": 42}}` | Per-class 1/7 base sample for CICIoT2023, applied automatically |
-| `F1_AVERAGE` | `"weighted"` | Must match `FULL_REFERENCE` |
-| `RUN_FULL_TOO` | `False` | If `True`, re-runs the full-data pipeline instead of using the stored constants (slow) |
-| `FULL_REFERENCE` | pre-filled | Full-dataset RF weighted-F1 (mean, std) from the benchmark run (Table 3) |
+| `F1_AVERAGE` | `"weighted"` | F1 averaging used by the budget rule (macro F1 is also recorded) |
+| `CLF_N_ESTIMATORS` | `100` | Random Forest size |
+| `TEST_REFERENCE`, `OLD_KSTAR` | pre-filled | Earlier test-partition curves and budgets. Used **only** to report how much the validation-based choice differs; never used for selection |
+| `SHOW_TEST_REFERENCE` | `False` | If `True`, overlays the earlier test-partition curve on the figure (not for the manuscript figure) |
 
-The notebook reports two separate spread components. `σ_sampling` is the spread across sample draws and is the shaded band in Figure 4. `σ_split` is the spread across split/forest seeds.
+For the full training partitions, the spread is the std across seeds. For the samples, the notebook reports two separate components: `std_sampling` is the spread across sample draws and is the shaded band in Figure 4, and `std_split` is the mean spread across seeds within a draw.
+
+**Result (recorded run).** Using $\tau = 1\%$:
+
+| Dataset | $k^\star$, full training partition | $k^\star$, 20% sample | Δ F1 at the sample's $k^\star$ (sample − full) |
+|---|---|---|---|
+| RT-IoT2022 | 25 | 25 | −0.12 pts |
+| Edge-IIoTset | 25 | 25 | −0.24 pts |
+| CICIoT2023 | 10 | 5 | −0.08 pts |
+
+The validation-based budgets on the full training partitions are $k^\star = 25, 25, 10$. These are the budgets used in Sections 4.3–4.5. The same $k^\star$ is obtained on all three datasets for any $\tau$ between 0.6% and 2.0%. The recorded run took about 6 minutes on the authors' CPU machine.
 
 **Outputs:**
 
-- `cgfs_sample_vs_full.png` and `cgfs_sample_vs_full.pdf` (Figure 4)
-- `cgfs_sample_raw.csv`, `cgfs_sample_per_draw.csv`, `cgfs_sample_vs_full.csv`
-- `cgfs_sample_vs_full.tex` (paste-ready LaTeX tables)
+- `sensitivity_sample_vs_full_val.png` and `sensitivity_sample_vs_full_val.pdf` (Figure 4)
+- `cgfs_budget_val_raw.csv`: one row per (dataset, variant, seed, sample draw, k), with weighted and macro F1, fitting/validation row counts, and the selected features
+- `cgfs_budget_val_summary.csv`: per (dataset, k), the full-partition mean and std, the sample mean, `std_sampling`, and `std_split`, plus the earlier test-partition reference
+- `cgfs_budget_val_tables.tex`: paste-ready rows for Tables 3 and 4 (with $k^\star$ in bold), the rule thresholds, and the $\tau$ interval
 
-To select $k^\star$, apply the tolerance rule of Eq. (25) with $\tau = 1\%$ to the resulting curves. This gives $k^\star = 25, 25, 10$ on the full data for RT-IoT2022, Edge-IIoTset, and CICIoT2023.
+This notebook supersedes `CGFS_sample_vs_full_experiment.ipynb`, which scored the sensitivity curves on the test partitions. The earlier notebook remains available in the git history.
 
 ### Sections 4.3, 4.4, 4.5: Detection Performance, SOTA Comparison, Runtime
 
@@ -374,7 +399,7 @@ The dense similarity matrix needs $O(d^2)$ memory and $O(nd^2)$ time to build. C
 
 ## Notes and Known Caveats
 
-- **Leakage-free protocol.** Screening, standardization, MI weights, and feature selection all use the training partition only.
+- **Leakage-free protocol.** Screening, standardization, MI weights, and feature selection all use the training partition only. The budget $k^\star$ is also chosen on a validation subset of the training partition (Section 4.2), never on the test partition.
 - **Timing.** Reported times depend on hardware, BLAS threading, and library versions. The paper's timings were measured on an Intel Core i7-10750H with 32 GB RAM (CPU only).
 - **pandas ≥ 3.0.** The commented `groupby(...).apply(...)` sampling line in the benchmark notebook may drop the label column under pandas 3.0. The other notebooks use an equivalent `apply_base_sample` helper that avoids this problem. If you use pandas 3.x, use that helper for CICIoT2023 in the benchmark notebook as well.
 - **Linear SVM convergence.** `LinearSVC` may emit `ConvergenceWarning` at `max_iter = 2000`. This matches the paper's configuration.
