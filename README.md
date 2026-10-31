@@ -304,7 +304,7 @@ Useful options:
 
 **Outputs:**
 
-- `cgfs_coverage_gain.png` and `cgfs_coverage_gain.pdf` (**Figure 5**)
+- `cgfs_coverage_gain.png` and `cgfs_coverage_gain.pdf` (**Figure 7**)
 - `cgfs_marginal_gain.png` and `cgfs_marginal_gain.pdf` (supplementary: log-scale marginal gains, weighted vs. unweighted)
 - `cgfs_coverage_trajectory_raw.csv`, `cgfs_coverage_per_dataset.csv`, `cgfs_coverage_across_datasets.csv`
 - `cgfs_coverage_gain.tex`
